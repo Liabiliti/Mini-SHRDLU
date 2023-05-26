@@ -4,189 +4,80 @@
 #include <math.h>
 #include <stack>
 #include <queue>
+#include "Action.h"
+#include "Goal.h"
+#include <unordered_set>
 
 using namespace std;
 
 class State
 {
-private:
-    int takenColumn, boardNumber;
-    vector<vector<int>> board;
+    int size, boardNumber;
+    vector<vector<int> > board;
+    vector<State> previousMoves;
+
 public:
-    int value, size;
-    vector<vector<int>> board;
-    //vector<vector<int>> board;// needs to be private
     State() : board(3, vector<int>(3, 0))
     {
         size = 3;
         boardNumber = 6;
-        random();
+        random(size, boardNumber);
         pushdown();
     }
-    State(int boardSize, int boardRange) : board(boardSize, vector<int>(boardSize, 0))
+    State(int boardSize, int amountOfNumbers) : board(boardSize, vector<int>(boardSize, 0))
     {
         size = boardSize;
-        if (isNumberInRange(boardRange, size))
-        {
-            boardNumber = boardRange;
-            random();
-            pushdown();
-        }
-        else
-        {
-            cout << "Not in the range of possible numbers" << endl;
-        }
+        boardNumber = amountOfNumbers;
+        random(size, boardNumber);
+        pushdown();
     }
 
-    bool isNumberInRange(int value, int size)
+    bool operator==(const State &state) const
     {
-        if (value >= size && value <= (pow(size, 2) - size))
+        for (int i = 0; i < state.board.size(); i++)
         {
-            return true;
-        }
-        return false;
-    }
-    void random();
-    void printBoard(vector<vector<int>> board);
-    void pushdown();
-    bool existingMove(State &newState, vector<State> &previousMoves);
-    void possibleMoves(State currentState, queue<State> &possibleMoves, vector<State> &previousMoves);
-    void possibleMoves(State currentState, vector<State> &possibleMoves, vector<State> &previousMoves);
-    bool operator==(const State &object);
-
-    bool isEmpty(int col)
-    {
-        if (board[size - 1][col] == 0)
-        {
-            return true;
-        }
-        return false;
-    }
-
-    bool isFull(int col)
-    {
-        if (board[0][col] != 0)
-        {
-            return true;
-        }
-        return false;
-    }
-
-    int removeBlock(int column)
-    {
-        if (!isEmpty(column))
-        {
-            takenColumn = column;
-            for (int i = 0; i < size; i++)
+            for (int j = 0; j < state.board[i].size(); j++)
             {
-                if (board[i][column] != 0)
+                if (board[i][j] != state.board[i][j])
                 {
-                    int value = board[i][column];
-                    board[i][column] = 0;
-                    return value;
+                    return false;
                 }
             }
         }
-        return -1;
+        return true;
     }
-
-    bool insertBlock(int column, int value)
-    {
-        if (value == -1)
-        {
-            return false;
-        }
-        if (!isFull(column))
-        {
-            for (int i = size - 1; i >= 0; i--)
-            {
-                if (board[i][column] == 0)
-                {
-                    board[i][column] = value;
-                    return true;
-                }
-            }
-        }
-        insertBlock(takenColumn, value);
-        return false;
-    }
-
-    State moveBlock(int source, int destination)
-    {
-        State newState = *this;
-        if (newState.insertBlock(destination, newState.removeBlock(source)))
-        {
-            return newState;
-        }
-        return *this;
-    }
+    // Task 1.2
+    int getBoardSize();
+    int getNumberOfBlocks();
+    void random(int size, int boardrange); // Input size to be size of the board, board range are the numbers that are put on the board
+    void pushdown();                       // Pushed down numbers until they are at the bottom of the board
+    void printBoard();                     // Prints board
+    // Task 1.3.1
+    bool isFull(int col);                    // If column is full returns true
+    bool isEmpty(int col);                   // If column is empty return true
+    int removeBlock(int column);             // If column is not empty, return block
+    bool insertBlock(int column, int value); // If column is full return false, otherwise place block
+    bool moveBlock(Action a);                // Read source and destination from action object
+    // Task 1.3.2
+    void possibleMoves(queue<Action> &actions, Goal goal);
+    bool isGoal(Goal goal);
+    int isValue(int col);
+    // Task 2
+    double heuristic(Goal goal);
+    void possibleMoves(queue<Action> &actions);
+    void possibleMoves(priority_queue<Action> &actions, Goal goal);
+    // Task 3
+    void possibleMoves(priority_queue<Action> &actions, vector<Goal> goals);
 };
-bool State::operator==(const State &state)
+int State::getBoardSize()
 {
-    for (int i = 0; i < state.board.size(); i++)
-    {
-        for (int j = 0; j < state.board[i].size(); j++)
-        {
-            if (board[i][j] != state.board[i][j])
-            {
-                return false;
-            }
-        }
-    }
-    return true;
+    return size;
 }
-void State::possibleMoves(State currentState, queue<State> &possibleMoves, vector<State> &previousMoves)
+int State::getNumberOfBlocks()
 {
-    if (existingMove(currentState, previousMoves))
-    {
-        return;
-    }
-    previousMoves.push_back(State(currentState));
-    for (int i = 0; i < size; i++)
-    {
-        for (int j = 0; j < size; j++)
-        {
-            State newState = moveBlock(i, j);
-            if (!existingMove(newState, previousMoves))
-            {
-                possibleMoves.push(newState);
-            }
-        }
-    }
+    return boardNumber;
 }
-void State::possibleMoves(State currentState, vector<State> &possibleMoves, vector<State> &previousMoves)
-{
-    if (existingMove(currentState, previousMoves))
-    {
-        return;//if current is an existing move, leave function
-    }
-    previousMoves.push_back(State(currentState));//if not add currentState to previous moves
-    for (int i = 0; i < size; i++)
-    {
-        for (int j = 0; j < size; j++)
-        {
-            State newState = moveBlock(i, j); 
-            if (!existingMove(newState, previousMoves))
-            {
-                possibleMoves.push_back(newState); // if its not an existing move add it to possible moves
-            }
-        }
-    }
-}
-
-bool State::existingMove(State &newState, vector<State> &previousMoves)
-{
-    for (int i = 0; i < previousMoves.size(); i++)
-    {
-        if (newState == previousMoves[i])
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-void State::random()
+void State::random(int size, int boardNumber)
 {
     srand(time(0));
     for (int i = 1; i <= boardNumber; i++)
@@ -210,30 +101,6 @@ void State::random()
         board[row][col] = i;
     }
 }
-
-void State::printBoard(vector<vector<int>> board)
-{
-    for (int i = 0; i < size; i++)
-    {
-        cout << " ----";
-    }
-    cout << endl;
-    for (int i = 0; i < size; i++)
-    {
-        for (int j = 0; j < size; j++)
-        {
-
-            cout << "| " << setw(2) << board[i][j] << " ";
-        }
-        cout << "|" << endl;
-    }
-    for (int i = 0; i < size; i++)
-    {
-        cout << " ----";
-    }
-    cout << endl;
-}
-
 void State::pushdown()
 {
     stack<int> dropdown;
@@ -260,3 +127,271 @@ void State::pushdown()
         }
     }
 }
+void State::printBoard()
+{
+    for (int i = 0; i < size; i++)
+    {
+        cout << " ----";
+    }
+    cout << endl;
+    for (int i = 0; i < size; i++)
+    {
+        for (int j = 0; j < size; j++)
+        {
+
+            cout << "| " << setw(2) << board[i][j] << " ";
+        }
+        cout << "|" << endl;
+    }
+    for (int i = 0; i < size; i++)
+    {
+        cout << " ----";
+    }
+    cout << endl;
+}
+bool State::isFull(int col)
+{
+    if (board[0][col] != 0)
+    {
+        return true;
+    }
+    return false;
+}
+bool State::isEmpty(int col)
+{
+    if (board[size - 1][col] == 0)
+    {
+        return true;
+    }
+    return false;
+}
+int State::removeBlock(int column)
+{
+    if (!isEmpty(column))
+    {
+        int takenColumn = column;
+        for (int i = 0; i < size; i++)
+        {
+            if (board[i][column] != 0)
+            {
+                int value = board[i][column];
+                board[i][column] = 0;
+                return value;
+            }
+        }
+    }
+    return -1;
+}
+bool State::insertBlock(int column, int value)
+{
+    if (value == -1)
+    {
+        return false;
+    }
+    if (!isFull(column))
+    {
+        for (int i = size - 1; i >= 0; i--)
+        {
+            if (board[i][column] == 0)
+            {
+                board[i][column] = value;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+bool State::moveBlock(Action a)
+{
+    if (a.destination == a.source)
+    {
+        return false;
+    }
+    if (insertBlock(a.destination, removeBlock(a.source)))
+    {
+        return true;
+    }
+    return false;
+}
+int State::isValue(int col)
+{
+    for (int i = 0; i < size; i++)
+    {
+        if (board[i][col] != 0)
+        {
+            return board[i][col];
+        }
+    }
+    return -1;
+}
+void State::possibleMoves(queue<Action> &actions)
+{
+
+    for (int i = 0; i < size; i++)
+    {
+        for (int j = 0; j < size; j++)
+        {
+            Action action;
+            action.destination = j;
+            action.source = i;
+            State temp = State(*this);
+            if (
+                temp.moveBlock(action))
+            {
+                actions.push(action);
+            }
+        }
+    }
+    return;
+}
+bool State::isGoal(Goal goal)
+{
+    if (board[goal.row][goal.col] == goal.value)
+    {
+        return true;
+    }
+    return false;
+}
+double State::heuristic(Goal goal) // Need to calibrate for multiple goals
+
+{
+    double distance = 0;
+    double cost = 100 / ((size-1)*3)+2;
+    int row, col;
+    for (row = 0; row < board.size(); row++)
+    {
+        for (col = 0; col < board[row].size(); col++)
+        {
+            if (board[row][col] == goal.value)
+            {
+                goto check;
+            }
+        }
+    }
+check:
+    // Change so that is adjusts with boardsize
+    if (board[goal.row][goal.col] == goal.value) // If is goal, return 100
+    {
+        return distance;
+    }
+    if (board[goal.row][goal.col] != goal.value) // If goal row/col is not value ((n-1)*3) + 2
+    {
+        distance += cost;
+    }
+    if (board[goal.row][goal.col] != 0) // If goal row/col is not 0
+    {
+        distance += cost;
+    }
+    int above = 0;
+    while ((row - above) > -1) // number of blocks above target
+    {
+        if (board[row - above][col] != 0)
+            distance += cost;
+        above++;
+    }
+    above = 0;
+    while ((goal.row - above) > -1) // number of blocks above location
+    {
+        if (board[goal.row - above][goal.col] != 0)
+            distance += cost;
+        above++;
+    }
+    int below = 1;
+    while ((goal.row + below) < size) // number of blocks below target is 0
+    {
+        if (board[goal.row + below][goal.col] == 0)
+            distance += cost;
+        below++;
+    }
+
+    return distance;
+}
+void State::possibleMoves(priority_queue<Action> &actions, Goal goal)
+{
+    for (int i = 0; i < size; i++)
+    {
+        for (int j = 0; j < size; j++)
+        {
+            Action action;
+            action.destination = j;
+            action.source = i;
+            State temp = State(*this);
+            if (temp.moveBlock(action))
+            {
+                action.heuristic = temp.heuristic(goal);
+                actions.push(action);
+            }
+        }
+    }
+}
+void State::possibleMoves(priority_queue<Action> &actions, vector<Goal> goals)
+{
+    for (int i = 0; i < size; i++)
+    {
+        for (int j = 0; j < size; j++)
+        {
+            Action action;
+            action.destination = j;
+            action.source = i;
+            State temp = State(*this);
+            if (temp.moveBlock(action))
+            {
+                for (int i = 0; i < goals.size(); i++)
+                {
+                    action.heuristic += temp.heuristic(goals[i]);
+                }
+                action.heuristic /= goals.size();
+                actions.push(action);
+                action.heuristic = 0;
+            }
+        }
+    }
+}
+
+class SearchNode
+{
+public:
+    State state;
+    Goal goal;
+    double cost;
+    double fScore;
+    SearchNode *parent;
+    SearchNode() {}
+    SearchNode(State newState, Goal sameGoal, double newCost, SearchNode *parentNode)
+    {
+        state = newState;
+        goal = sameGoal;
+        cost = newCost;
+        parent = parentNode;
+    }
+    bool operator==(const SearchNode &other) const
+    {
+        return state == other.state;
+    }
+     bool operator <(const SearchNode a) const
+    {
+        return this->fScore > a.fScore;
+    }
+
+    vector<State> possibleMoves(State node)
+    {
+        vector<State> moves;
+        node.printBoard();
+        for (int i = 0; i < node.getBoardSize(); i++)
+        {
+            for (int j = 0; j < node.getBoardSize(); j++)
+            {
+                Action action;
+                action.destination = j;
+                action.source = i;
+                State temp = State(node);
+                if (temp.moveBlock(action))
+                {
+                    // action.heuristic = temp.heuristic(goal);
+                    moves.push_back(temp);
+                }
+            }
+        }
+        return moves;
+    }
+};

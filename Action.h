@@ -1,9 +1,11 @@
-
+#include <iostream>
+using namespace std;
 class Action{
     public:
-    int destination, source, heuristic;
+    int destination, source;
+    double heuristic;
     bool operator <(const Action a) const
     {
-        return a.heuristic < this->heuristic;
+        return this->heuristic > a.heuristic;
     }
 };
