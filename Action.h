@@ -8,4 +8,8 @@ class Action{
     {
         return this->heuristic > a.heuristic;
     }
+    static bool compare(Action n1, Action n2)
+    {
+        return n1.heuristic > n2.heuristic;
+    }
 };

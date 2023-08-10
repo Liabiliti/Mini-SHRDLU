@@ -68,6 +68,8 @@ public:
     void possibleMoves(priority_queue<Action> &actions, Goal goal);
     // Task 3
     void possibleMoves(priority_queue<Action> &actions, vector<Goal> goals);
+    // Task 4
+    void randomMove(priority_queue<Action> &actions);
 };
 int State::getBoardSize()
 {
@@ -169,7 +171,7 @@ int State::removeBlock(int column)
 {
     if (!isEmpty(column))
     {
-        int takenColumn = column;
+        //int takenColumn = column;
         for (int i = 0; i < size; i++)
         {
             if (board[i][column] != 0)
@@ -188,7 +190,7 @@ bool State::insertBlock(int column, int value)
     {
         return false;
     }
-    if (!isFull(column))
+    else if (!isFull(column))
     {
         for (int i = size - 1; i >= 0; i--)
         {
@@ -207,7 +209,7 @@ bool State::moveBlock(Action a)
     {
         return false;
     }
-    if (insertBlock(a.destination, removeBlock(a.source)))
+    else if (insertBlock(a.destination, removeBlock(a.source)))
     {
         return true;
     }
@@ -226,7 +228,6 @@ int State::isValue(int col)
 }
 void State::possibleMoves(queue<Action> &actions)
 {
-
     for (int i = 0; i < size; i++)
     {
         for (int j = 0; j < size; j++)
@@ -235,8 +236,7 @@ void State::possibleMoves(queue<Action> &actions)
             action.destination = j;
             action.source = i;
             State temp = State(*this);
-            if (
-                temp.moveBlock(action))
+            if (temp.moveBlock(action))
             {
                 actions.push(action);
             }
@@ -253,7 +253,6 @@ bool State::isGoal(Goal goal)
     return false;
 }
 double State::heuristic(Goal goal) // Need to calibrate for multiple goals
-
 {
     double distance = 0;
     double cost = 100 / ((size-1)*3)+2;
@@ -270,7 +269,7 @@ double State::heuristic(Goal goal) // Need to calibrate for multiple goals
     }
 check:
     // Change so that is adjusts with boardsize
-    if (board[goal.row][goal.col] == goal.value) // If is goal, return 100
+    if (board[goal.row][goal.col] == goal.value) // If is goal, return 0
     {
         return distance;
     }
@@ -283,7 +282,7 @@ check:
         distance += cost;
     }
     int above = 0;
-    while ((row - above) > -1) // number of blocks above target
+    while ((row - above) > -1) // number of blocks above target not equal to 0
     {
         if (board[row - above][col] != 0)
             distance += cost;
@@ -306,8 +305,10 @@ check:
 
     return distance;
 }
+
 void State::possibleMoves(priority_queue<Action> &actions, Goal goal)
 {
+    int row, col;
     for (int i = 0; i < size; i++)
     {
         for (int j = 0; j < size; j++)
@@ -323,6 +324,25 @@ void State::possibleMoves(priority_queue<Action> &actions, Goal goal)
             }
         }
     }
+}
+void State::randomMove(priority_queue<Action> &actions)
+{
+    for (int i = 0; i < size; i++)
+    {
+        for (int j = 0; j < size; j++)
+        {
+            Action action;
+            action.destination = j;
+            action.source = i;
+            State temp = State(*this);
+            if (temp.moveBlock(action))
+            {
+                action.heuristic = rand() % 10;
+                actions.push(action);
+            }
+        }
+    }
+    return;
 }
 void State::possibleMoves(priority_queue<Action> &actions, vector<Goal> goals)
 {
@@ -368,15 +388,15 @@ public:
     {
         return state == other.state;
     }
-     bool operator <(const SearchNode a) const
-    {
-        return this->fScore > a.fScore;
-    }
 
+    static bool compare(SearchNode* n1, SearchNode* n2)
+    {
+        return n1->fScore > n2->fScore;
+    }
+    
     vector<State> possibleMoves(State node)
     {
         vector<State> moves;
-        node.printBoard();
         for (int i = 0; i < node.getBoardSize(); i++)
         {
             for (int j = 0; j < node.getBoardSize(); j++)
